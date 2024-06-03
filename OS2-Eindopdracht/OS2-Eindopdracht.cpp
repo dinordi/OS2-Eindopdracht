@@ -173,7 +173,7 @@ void Worker() {
                 x[2] = data[i];
                 y[0] = y[1];
                 y[1] = y[2];
-                y[2] = (cbb0 * x[0] + cbb1 * x[1] + cbb2 * x[2] - cba1 * y[0] - cba2 * y[1]);
+                y[2] = (cbb0 * x[2] + cbb1 * x[1] + cbb2 * x[0] + cba1 * y[1] + cba2 * y[0]);
 
                 data[i] = y[2];
             }
@@ -190,7 +190,7 @@ void Worker() {
                 x[2] = data[i];
                 y[0] = y[1];
                 y[1] = y[2];
-                y[2] = (ctb0 * x[0] + ctb1 * x[1] + ctb2 * x[2] - cta1 * y[0] - cta2 * y[1]);
+                y[2] = (ctb0 * x[2] + ctb1 * x[1] + ctb2 * x[0] + cta1 * y[1] + cta2 * y[0]);
 
                 data[i] = y[2];
             }
