@@ -15,10 +15,12 @@
 #include <thread>
 #include <mutex>
 #include <math.h>
+#include <queue>
+#include <utility> 
 
 // #include <semaphore.h>
 
-const int BUFLEN = 20;   // de lengte van de queue
+const int BUFLEN = 20000;   // de lengte van de queue
 const int BLOCK_SIZE = 2048;
 double ba1, ba2, bb0, bb1, bb2;
 double ta1, ta2, tb0, tb1, tb2;
@@ -154,6 +156,10 @@ Queue queue;
 void Worker() {
     double x[3] = {0, 0, 0};
     double y[3] = {0, 0, 0};
+    signed short ctb0 = static_cast<signed short>(tb0), ctb1 = static_cast<signed short>(tb1), 
+        ctb2 = static_cast<signed short>(tb2), cta1 = static_cast<signed short>(ta1), cta2 = static_cast<signed short>(ta2),
+        cbb0 = static_cast<signed short>(bb0), cbb1 = static_cast<signed short>(bb1),
+        cbb2 = static_cast<signed short>(bb2), cba1 = static_cast<signed short>(ba1), cba2 = static_cast<signed short>(ba2);
     while (true) {
         Block* block = queue.get();
         if (!block) break;
@@ -167,7 +173,7 @@ void Worker() {
                 x[2] = data[i];
                 y[0] = y[1];
                 y[1] = y[2];
-                y[2] = (bb0/2 * x[0] + bb1/2 * x[1] + bb2/2 * x[2] - ba1 * y[0] - ba2 * y[1]) / 2;
+                y[2] = (cbb0 * x[0] + cbb1 * x[1] + cbb2 * x[2] - cba1 * y[0] - cba2 * y[1]);
 
                 data[i] = y[2];
             }
@@ -184,13 +190,17 @@ void Worker() {
                 x[2] = data[i];
                 y[0] = y[1];
                 y[1] = y[2];
-                y[2] = (tb0/2 * x[0] + tb1/2 * x[1] + tb2/2 * x[2] - ta1 * y[0] - ta2 * y[1]) / 2;
+                y[2] = (ctb0 * x[0] + ctb1 * x[1] + ctb2 * x[2] - cta1 * y[0] - cta2 * y[1]);
 
                 data[i] = y[2];
             }
             block->setPhase(3);
             std::cout << "Processed block with size " << block->getData().size() << "\n";
             queue.put(block);
+        }
+        else
+        {
+            			queue.put(block);
         }
     }
 }
@@ -224,26 +234,33 @@ void writePCM(const std::string& outputFile) {
         return;
     }
 
+    std::priority_queue<std::pair<int, Block*>, std::vector<std::pair<int, Block*>>, std::greater<>> blockQueue;
+
     while (true) {
-        Block* block = queue.get(); 
+        Block* block = queue.get();
         std::cout << "Got block from queue\n";
         if (!block && queue.isDone()) break; // Only break if block is nullptr and done is true
         if (!block) continue;
         std::cout << "Block is not empty\n";
 
+        blockQueue.push(std::make_pair(block->getIndex(), block));
+    }
+
+    while (!blockQueue.empty()) {
+        Block* block = blockQueue.top().second;
+        blockQueue.pop();
 
         if (block->getPhase() == 3) {
             std::cout << "Block in phase 3\n";
             const std::vector<signed short>& data = block->getData();
 
-            std::cout << "Writing block with size " << data.size() << "\n";
+            std::cout << "Writing block with size " << data.size() << " and index " << block->getIndex() << "\n";
             file.write(reinterpret_cast<const char*>(data.data()), data.size() * sizeof(signed short));
         }
         delete block;
     }
     file.close();
 }
-
 int main(int argc, const char* argv[])
 {
 
@@ -292,7 +309,7 @@ int main(int argc, const char* argv[])
     }
     std::cout << "Reached checkpoint 3...\n";
     for (auto& thread : threads) {
-        thread.join();
+       thread.join();
     }
     queue.setDone();
     std::cout << "Reached checkpoint 4...\n";
