@@ -164,11 +164,17 @@ Queue queue;
 void Worker() {
     //std::array<signed short, SIZE / 2> x = { 0 };
     std::array<signed short, SIZE / 2> y = { 0 };
-    signed short ctb0 = static_cast<signed short>(tb0), ctb1 = static_cast<signed short>(tb1), 
+    /*signed short ctb0 = static_cast<signed short>(tb0), ctb1 = static_cast<signed short>(tb1),
         ctb2 = static_cast<signed short>(tb2), cta1 = static_cast<signed short>(ta1), cta2 = static_cast<signed short>(ta2),
         cbb0 = static_cast<signed short>(bb0), cbb1 = static_cast<signed short>(bb1),
-        cbb2 = static_cast<signed short>(bb2), cba1 = static_cast<signed short>(ba1), cba2 = static_cast<signed short>(ba2);
+        cbb2 = static_cast<signed short>(bb2), cba1 = static_cast<signed short>(ba1), cba2 = static_cast<signed short>(ba2);*/
     
+    //Tjebbe way
+    signed short ctb0 = static_cast<signed short>(ta1), ctb1 = static_cast<signed short>(ta2),
+        ctb2 = static_cast<signed short>(tb0), cta1 = static_cast<signed short>(tb1), cta2 = static_cast<signed short>(tb2),
+        cbb0 = static_cast<signed short>(ba1), cbb1 = static_cast<signed short>(ba2),
+        cbb2 = static_cast<signed short>(bb0), cba1 = static_cast<signed short>(bb1), cba2 = static_cast<signed short>(bb2);
+
     std::cout << "ctb0: " << ctb0 << " ctb1: " << ctb1 << " ctb2: " << ctb2 << " cta1: " << cta1 << " cta2: " << cta2 << std::endl;
     std::cout << "cbb0: " << cbb0 << " cbb1: " << cbb1 << " cbb2: " << cbb2 << " cba1: " << cba1 << " cba2: " << cba2 << std::endl;
     
@@ -224,7 +230,7 @@ void Worker() {
                     y[n] = ctb0 * x[n];
                 }
             }
-            //block->setData(y);
+            block->setData(y);
             /*for (auto num : y)
             {
                 std::cout << num << " ";
