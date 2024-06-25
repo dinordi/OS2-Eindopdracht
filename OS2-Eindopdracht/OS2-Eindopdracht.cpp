@@ -47,6 +47,8 @@ void bassCoefficients(int intensity, double* b0, double* b1, double* b2, double*
     *b0 = (a * ((a + 1) - (a - 1) * cos(w0) + 2.0 * sqrt(a) * alpha)) / a0;
     *b1 = (2 * a * ((a - 1) - (a + 1) * cos(w0))) / a0;
     *b2 = (a * ((a + 1) - (a - 1) * cos(w0) - 2.0 * sqrt(a) * alpha)) / a0;
+    std::cout << "bb0: " << *b0 << " bb1: " << *b1 << " bb2: " << *b2 << " ba1: " << *a1 << " ba2: " << *a2 << std::endl;
+
 }
 
 void trebleCoefficients(int intensity, double* b0, double* b1, double* b2, double* a1, double* a2)
@@ -68,6 +70,8 @@ void trebleCoefficients(int intensity, double* b0, double* b1, double* b2, doubl
     *b0 = (a * ((a + 1) + (a - 1) * cos(w0) + 2.0 * sqrt(a) * alpha)) / a0;
     *b1 = (-2.0 * a * ((a - 1) + (a + 1) * cos(w0))) / a0;
     *b2 = (a * ((a + 1) + (a - 1) * cos(w0) - 2.0 * sqrt(a) * alpha)) / a0;
+
+    std::cout << "tb0: " << *b0 << " tb1: " << *b1 << " tb2: " << *b2 << " ta1: " << *a1 << "ta2: " << *a2 << std::endl;
 }
 
 class Block {
@@ -158,39 +162,58 @@ public:
 Queue queue;
 
 void Worker() {
-    std::array<signed short, SIZE / 2> x = { 0 };
+    //std::array<signed short, SIZE / 2> x = { 0 };
     std::array<signed short, SIZE / 2> y = { 0 };
     signed short ctb0 = static_cast<signed short>(tb0), ctb1 = static_cast<signed short>(tb1), 
         ctb2 = static_cast<signed short>(tb2), cta1 = static_cast<signed short>(ta1), cta2 = static_cast<signed short>(ta2),
         cbb0 = static_cast<signed short>(bb0), cbb1 = static_cast<signed short>(bb1),
         cbb2 = static_cast<signed short>(bb2), cba1 = static_cast<signed short>(ba1), cba2 = static_cast<signed short>(ba2);
+    
+    std::cout << "ctb0: " << ctb0 << " ctb1: " << ctb1 << " ctb2: " << ctb2 << " cta1: " << cta1 << " cta2: " << cta2 << std::endl;
+    std::cout << "cbb0: " << cbb0 << " cbb1: " << cbb1 << " cbb2: " << cbb2 << " cba1: " << cba1 << " cba2: " << cba2 << std::endl;
+    
     while (true) {
         Block* block = queue.get();
         if (!block) break;
 
         if (block->getPhase() == 1) {
+            y.fill(0);
             // Apply bass equalizer
-            std::array<signed short, SIZE / 2> data = block->getData();
-            for (int n = 0; n < 4; n++) {
+            std::array<signed short, SIZE / 2> x = block->getData();
+            /*for (auto num : x) {
+                std::cout << num << " ";
+            }
+            std::cout << "END BASS X" << std::endl;*/
+            for (int n = 0; n < y.size(); n++) {
                 if (n >= 2) {
-                    y[n] = ctb0 * x[n] + ctb1 * x[n - 1] + ctb2 * x[n - 2] + cta1 * y[n - 1] + cta2 * y[n - 2];
+                    y[n] = cbb0 * x[n] + cbb1 * x[n - 1] + cbb2 * x[n - 2] + cba1 * y[n - 1] + cba2 * y[n - 2];
                 }
                 else if (n == 1) {
-                    y[n] = ctb0 * x[n] + ctb1 * x[n - 1] + cta1 * y[n - 1];
+                    y[n] = cbb0 * x[n] + cbb1 * x[n - 1] + cba1 * y[n - 1];
                 }
                 else {
-                    y[n] = ctb0 * x[n];
+                    y[n] = cbb0 * x[n];
                 }
             }
+            /*if (y.size() > 0) {
+                for (auto num : y) {
+                    std::cout << num << " ";
+                }
+                std::cout << "END BASS Y" << std::endl;
+            }*/
             block->setData(y);
             block->setPhase(2);
-            std::cout << "Processed block with size " << block->getData().size() << "\n";
+            std::cout << "Processed BASS, block with size " << block->getData().size() << "\n";
             queue.put(block);
         }
         else if (block->getPhase() == 2) {
             // Apply treble equalizer
-            std::array<signed short, SIZE / 2> data = block->getData();
-            for (int n = 0; n < 4; n++) {
+            std::array<signed short, SIZE / 2> x = block->getData();
+            //std::cout << "ctb0: " << ctb0 << " ctb1: " << ctb1 << " ctb2: " << ctb2 << " cta1: " << cta1 << " cta2: " << cta2 << std::endl;
+            /*for (auto num : x) {
+				std::cout << num << " ";
+			}*/
+            for (int n = 0; n < y.size(); n++) {
                 if (n >= 2) {
                     y[n] = ctb0 * x[n] + ctb1 * x[n - 1] + ctb2 * x[n - 2] + cta1 * y[n - 1] + cta2 * y[n - 2];
                 }
@@ -201,9 +224,14 @@ void Worker() {
                     y[n] = ctb0 * x[n];
                 }
             }
-            block->setData(y);
+            //block->setData(y);
+            /*for (auto num : y)
+            {
+                std::cout << num << " ";
+            }
+            std::cout << "END TREBLE Y" << std::endl;*/
             block->setPhase(3);
-            std::cout << "Processed block with size " << block->getData().size() << "\n";
+            std::cout << "Processed TREBLE, block with size " << block->getData().size() << "\n";
             queue.put(block);
         }
         else
@@ -222,9 +250,13 @@ void readPCM(const std::string& inputFile) {
 
     int index = 0;
     while (file.good()) {
-        std::array<signed short, SIZE / 2> buffer(SIZE / 2 / sizeof(signed short));
+        std::array<signed short, SIZE / 2> buffer;
         file.read(reinterpret_cast<char*>(buffer.data()), BLOCK_SIZE);
         if (file.gcount() == 0) break;
+        /*for (auto num : buffer)
+        {
+            std::cout << num << " ";
+        }*/
 
         Block* block = new Block(index++);
         block->setData(buffer);
@@ -261,7 +293,9 @@ void writePCM(const std::string& outputFile) {
         if (block->getPhase() == 3) {
             std::cout << "Block in phase 3\n";
             std::array<signed short, SIZE / 2> data = block->getData();
-
+            /*for (auto num : data) {
+				std::cout << num << " ";
+			}*/
             std::cout << "Writing block with size " << data.size() << " and index " << block->getIndex() << "\n";
             file.write(reinterpret_cast<const char*>(data.data()), data.size() * sizeof(signed short));
         }
@@ -282,8 +316,6 @@ int main(int argc, const char* argv[])
 
     
 
-    bassCoefficients(3, &bb0, &bb1, &bb2, &ba1, &ba2);
-    trebleCoefficients(-4, &tb0, &tb1, &tb2, &ta1, &ta2);
 
     int numThreads = std::stoi(argv[1] + 3);
     int bassIntensity = std::stoi(argv[2] + 3);
@@ -291,6 +323,8 @@ int main(int argc, const char* argv[])
     std::string inputFileStr = argv[4];
     std::string outputFileStr = argv[5];
 
+    bassCoefficients(bassIntensity, &bb0, &bb1, &bb2, &ba1, &ba2);
+    trebleCoefficients(trebleIntensity, &tb0, &tb1, &tb2, &ta1, &ta2);
 
     std::cout << "Number of threads: " << numThreads << std::endl;
     std::cout << "Bass intensity: " << bassIntensity << std::endl;
