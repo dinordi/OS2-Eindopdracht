@@ -17,7 +17,9 @@
 #include <math.h>
 #include <queue>
 #include <utility> 
+#include <array>
 
+#define SIZE 2048
 // #include <semaphore.h>
 
 const int BUFLEN = 20000;   // de lengte van de queue
@@ -154,8 +156,8 @@ public:
 Queue queue;
 
 void Worker() {
-    double x[3] = {0, 0, 0};
-    double y[3] = {0, 0, 0};
+    std::array<signed short, SIZE / 2> x = { 0 };
+    std::array<signed short, SIZE / 2> y = { 0 };
     signed short ctb0 = static_cast<signed short>(tb0), ctb1 = static_cast<signed short>(tb1), 
         ctb2 = static_cast<signed short>(tb2), cta1 = static_cast<signed short>(ta1), cta2 = static_cast<signed short>(ta2),
         cbb0 = static_cast<signed short>(bb0), cbb1 = static_cast<signed short>(bb1),
@@ -167,15 +169,16 @@ void Worker() {
         if (block->getPhase() == 1) {
             // Apply bass equalizer
             std::vector<signed short>& data = block->getData();
-            for (size_t i = 2; i < data.size(); ++i) {
-                x[0] = x[1];
-                x[1] = x[2];
-                x[2] = data[i];
-                y[0] = y[1];
-                y[1] = y[2];
-                y[2] = (cbb0 * x[0] + cbb1 * x[1] + cbb2 * x[2] - cba1 * y[0] - cba2 * y[1]);
-
-                data[i] = y[2];
+            for (int n = 0; n < 4; n++) {
+                if (n >= 2) {
+                    y[n] = ctb0 * x[n] + ctb1 * x[n - 1] + ctb2 * x[n - 2] + cta1 * y[n - 1] + cta2 * y[n - 2];
+                }
+                else if (n == 1) {
+                    y[n] = ctb0 * x[n] + ctb1 * x[n - 1] + cta1 * y[n - 1];
+                }
+                else {
+                    y[n] = ctb0 * x[n];
+                }
             }
             block->setPhase(2);
             std::cout << "Processed block with size " << block->getData().size() << "\n";
@@ -184,15 +187,16 @@ void Worker() {
         else if (block->getPhase() == 2) {
             // Apply treble equalizer
             std::vector<signed short>& data = block->getData();
-            for (size_t i = 2; i < data.size(); ++i) {
-                x[0] = x[1];
-                x[1] = x[2];
-                x[2] = data[i];
-                y[0] = y[1];
-                y[1] = y[2];
-                y[2] = (ctb0 * x[0] + ctb1 * x[1] + ctb2 * x[2] - cta1 * y[0] - cta2 * y[1]);
-
-                data[i] = y[2];
+            for (int n = 0; n < 4; n++) {
+                if (n >= 2) {
+                    y[n] = ctb0 * x[n] + ctb1 * x[n - 1] + ctb2 * x[n - 2] + cta1 * y[n - 1] + cta2 * y[n - 2];
+                }
+                else if (n == 1) {
+                    y[n] = ctb0 * x[n] + ctb1 * x[n - 1] + cta1 * y[n - 1];
+                }
+                else {
+                    y[n] = ctb0 * x[n];
+                }
             }
             block->setPhase(3);
             std::cout << "Processed block with size " << block->getData().size() << "\n";
