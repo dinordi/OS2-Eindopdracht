@@ -72,14 +72,16 @@ void trebleCoefficients(int intensity, double* b0, double* b1, double* b2, doubl
 
 class Block {
 private:
-    std::vector<signed short> data;
+    std::array<signed short, SIZE / 2> data;
     int phase; // 0 = created, 1 = filled, 2 = bassed, 3 = bassed+trebled, 4 = written
     int index;
 
 public:
-    Block(int newIndex) : data(BLOCK_SIZE), phase(0), index(newIndex) {}
+    Block(int newIndex) : phase(0), index(newIndex) {
+        data.fill(0);
+    }
 
-    void setData(const std::vector<signed short>& newData) {
+    void setData(const std::array<signed short, SIZE / 2> newData) {
         data = newData;
     }
 
@@ -95,7 +97,7 @@ public:
         return index;
     }
 
-    std::vector<signed short>& getData() {
+    std::array<signed short, SIZE / 2> getData() {
         return data;
     }
 };
@@ -168,7 +170,7 @@ void Worker() {
 
         if (block->getPhase() == 1) {
             // Apply bass equalizer
-            std::vector<signed short>& data = block->getData();
+            std::array<signed short, SIZE / 2> data = block->getData();
             for (int n = 0; n < 4; n++) {
                 if (n >= 2) {
                     y[n] = ctb0 * x[n] + ctb1 * x[n - 1] + ctb2 * x[n - 2] + cta1 * y[n - 1] + cta2 * y[n - 2];
@@ -180,13 +182,14 @@ void Worker() {
                     y[n] = ctb0 * x[n];
                 }
             }
+            block->setData(y);
             block->setPhase(2);
             std::cout << "Processed block with size " << block->getData().size() << "\n";
             queue.put(block);
         }
         else if (block->getPhase() == 2) {
             // Apply treble equalizer
-            std::vector<signed short>& data = block->getData();
+            std::array<signed short, SIZE / 2> data = block->getData();
             for (int n = 0; n < 4; n++) {
                 if (n >= 2) {
                     y[n] = ctb0 * x[n] + ctb1 * x[n - 1] + ctb2 * x[n - 2] + cta1 * y[n - 1] + cta2 * y[n - 2];
@@ -198,6 +201,7 @@ void Worker() {
                     y[n] = ctb0 * x[n];
                 }
             }
+            block->setData(y);
             block->setPhase(3);
             std::cout << "Processed block with size " << block->getData().size() << "\n";
             queue.put(block);
@@ -218,7 +222,7 @@ void readPCM(const std::string& inputFile) {
 
     int index = 0;
     while (file.good()) {
-        std::vector<signed short> buffer(BLOCK_SIZE / sizeof(signed short));
+        std::array<signed short, SIZE / 2> buffer(SIZE / 2 / sizeof(signed short));
         file.read(reinterpret_cast<char*>(buffer.data()), BLOCK_SIZE);
         if (file.gcount() == 0) break;
 
@@ -256,7 +260,7 @@ void writePCM(const std::string& outputFile) {
 
         if (block->getPhase() == 3) {
             std::cout << "Block in phase 3\n";
-            const std::vector<signed short>& data = block->getData();
+            std::array<signed short, SIZE / 2> data = block->getData();
 
             std::cout << "Writing block with size " << data.size() << " and index " << block->getIndex() << "\n";
             file.write(reinterpret_cast<const char*>(data.data()), data.size() * sizeof(signed short));
